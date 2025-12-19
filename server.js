@@ -70,17 +70,18 @@ app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// LOGIN - POST with SQL Injection Vulnerability
+// LOGIN - POST with SQL Injection FIXED
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
-    // VULNERABILITY: SQL Injection
-    // Directly concatenating user input into the query string
-    const sql = "SELECT * FROM users WHERE username = '" + username + "' AND password = '" + password + "'";
+    // SECURITY FIX: Use parameterized queries (Prepared Statements)
+    // This prevents SQL Injection by treating inputs as data, not executable code
+    const sql = "SELECT * FROM users WHERE username = ? AND password = ?";
 
-    console.log("Executing SQL: ", sql); // Log for educational purpose
+    // Log safe version for debugging
+    console.log(`Attempting login for user: ${username}`);
 
-    db.get(sql, (err, row) => {
+    db.get(sql, [username, password], (err, row) => {
         if (err) {
             console.error(err);
             return res.render('login', { error: "Database error" });
@@ -102,34 +103,38 @@ app.get('/dashboard', (req, res) => {
         return res.redirect('/login');
     }
 
-    // VULNERABILITY: Reflected XSS
-    // The 'q' parameter is passed to the view and rendered using <%- %>
+    // The 'q' parameter is passed to the view
+    // The FIX involves changing how it is rendered in the EJS template (using <%= %> instead of <%- %>)
     const query = req.query.q;
     res.render('dashboard', { user: req.session.user, query: query });
 });
 
-// Grades with IDOR Vulnerability
+// Grades with IDOR Vulnerability FIXED
 app.get('/grades', (req, res) => {
     if (!req.session.user) {
         return res.redirect('/login');
     }
 
-    // VULNERABILITY: IDOR (Insecure Direct Object Reference)
-    // We take the student_id from the query parameters and USE IT DIRECTLY.
-    // We never check if req.session.user.id matches student_id (unless the user is an admin).
-    // This allows student1 (id=2) to view student2's grades by changing the URL to ?student_id=3.
+    // SECURITY FIX: Access Control Check
+    // We check if the requested student_id matches the logged-in user's ID.
+    // (In a real app, Admins might be allowed to view others, but here we enforce strict ownership)
 
-    // Default to own ID if not provided, but honor the parameter if present
-    const studentId = req.query.student_id ? req.query.student_id : req.session.user.id;
+    let requestedId = req.query.student_id ? parseInt(req.query.student_id) : req.session.user.id;
+    const currentUserId = req.session.user.id;
+
+    if (requestedId !== currentUserId) {
+        // Simple Access Denied
+        return res.status(403).send("<h1>403 Forbidden</h1><p>You are not authorized to view these grades.</p><a href='/dashboard'>Back to Dashboard</a>");
+    }
 
     const sql = "SELECT * FROM grades WHERE student_id = ?";
 
-    db.all(sql, [studentId], (err, rows) => {
+    db.all(sql, [requestedId], (err, rows) => {
         if (err) {
             console.error(err);
             return res.status(500).send("Database error");
         }
-        res.render('grades', { grades: rows, student_id: studentId });
+        res.render('grades', { grades: rows, student_id: requestedId });
     });
 });
 

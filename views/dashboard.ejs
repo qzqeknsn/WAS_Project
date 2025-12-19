@@ -86,9 +86,11 @@
                         </div>
                         <div class="card-body">
                             <div class="alert alert-light border rounded-0">
-                                <!-- VULNERABILITY: Reflected XSS preserved -->
-                                <!-- Using <%- %> to allow raw HTML output -->
-                                Results for: <strong><%- query %></strong>
+                                <!-- SECURITY FIX: Reflected XSS -->
+                                <!-- We swapped <%- %> (raw) for <%= %> (escaped). Scripts will now render as text. -->
+                                Results for: <strong>
+                                    <%= query %>
+                                </strong>
                             </div>
                             <p class="text-muted text-center py-4">
                                 <i class="bi bi-inbox display-4 d-block mb-3 opacity-25"></i>
