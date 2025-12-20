@@ -24,6 +24,11 @@ db.serialize(() => {
     const stmt = db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
     stmt.run("student", "student123", "user");
     stmt.run("admin", "admin_super_secret", "admin");
+
+    // Новые аккаунты по запросу
+    stmt.run("rector", "rector_boss_2025", "admin"); // Ректор (права админа)
+    stmt.run("230107150", "student_pass_2025", "user"); // Студент с ID (права юзера)
+
     stmt.finalize();
 
     // 2. Таблица Комментариев
