@@ -1,129 +1,440 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Corporate Portal</title>
-    <!-- Bootstrap 5 CDN -->
+    <title>Student Portal - CyberState University</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
     <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            background-color: #0d1117;
-            font-family: 'Courier New', monospace;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
         }
 
-        .navbar {
-            border-bottom: 1px solid #30363d;
-            background-color: #161b22;
+        /* Layout */
+        .wrapper {
+            display: flex;
         }
 
+        /* Sidebar - Fixed */
+        .sidebar {
+            width: 260px;
+            background: #fff;
+            border-right: 1px solid #e9ecef;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            padding-left: 1.5rem;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #0d6efd;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .nav-menu {
+            padding: 1.5rem 1rem;
+            flex: 1;
+        }
+
+        .nav-link {
+            color: #495057;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-link:hover {
+            background-color: #e9ecef;
+            color: #0d6efd;
+        }
+
+        .nav-link.active {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+        }
+
+        .admin-link {
+            color: #dc3545 !important;
+            margin-top: 1rem;
+            border-top: 1px solid #f1f1f1;
+            padding-top: 1rem;
+        }
+
+        .admin-link:hover {
+            background-color: #fef2f2 !important;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            padding: 2rem;
+        }
+
+        /* Sections */
+        .course-section {
+            padding-top: 70px;
+            margin-top: -50px;
+            /* Offset for sticky headers if needed, using simple spacing for now */
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #0d6efd;
+        }
+
+        /* Cards */
         .card {
-            background-color: #161b22;
-            border: 1px solid #30363d;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 0.75rem;
+            border: 1px solid #e9ecef;
         }
 
-        .text-green {
-            color: #2ea043;
+        /* Badges */
+        .badge-grade {
+            font-size: 1rem;
+            padding: 0.5em 1em;
+            border-radius: 0.5rem;
         }
 
-        .text-blue {
-            color: #58a6ff;
+        /* News/Forum */
+        .forum-bg {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid #e9ecef;
         }
 
-        .wall-comment {
-            border-left: 3px solid #30363d;
-            padding-left: 1rem;
-            margin-bottom: 1rem;
+        .comment-item {
+            border-bottom: 1px solid #f1f1f1;
+            padding: 1rem 0;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
         }
     </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark p-3">
-        <div class="container">
-            <a class="navbar-brand text-green fw-bold" href="#">&gt; CORP_PORTAL</a>
-            <div class="d-flex align-items-center">
-                <span class="text-secondary me-3">USER: <span class="text-white">
-                        <%= user.username %>
-                    </span></span>
-                <span class="text-secondary me-3">ROLE: <span class="badge bg-secondary font-monospace">
-                        <%= user.role %>
-                    </span></span>
-                <a href="/logout" class="btn btn-sm btn-outline-danger font-monospace">LOGOUT</a>
+
+    <div class="wrapper">
+        <!-- SIDEBAR FIXED -->
+        <nav class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-shield-cat me-2"></i> CyberState
             </div>
-        </div>
-    </nav>
+            <div class="nav-menu">
+                <a href="#" class="nav-link"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="#courses" class="nav-link"><i class="fa-solid fa-book"></i> My Courses</a>
+                <a href="#schedule" class="nav-link"><i class="fa-regular fa-calendar-check"></i> Schedule</a>
+                <a href="#grades" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Grades Report</a>
+                <a href="#news" class="nav-link"><i class="fa-regular fa-comments"></i> News & Forum</a>
 
-    <div class="container mt-5">
-        <div class="row">
-            <!-- Sidebar / Menu -->
-            <div class="col-md-3">
-                <div class="card mb-3">
-                    <div class="card-header text-muted">&gt; MENU</div>
-                    <div class="list-group list-group-flush">
-                        <a href="/dashboard"
-                            class="list-group-item list-group-item-action active bg-secondary border-0">General
-                            Dashboard</a>
-                        <a href="#" class="list-group-item list-group-item-action bg-transparent text-secondary">My
-                            Profile</a>
-
-                        <!-- Link accessible only if Admin (but shown to tempt attacker) -->
-                        <a href="/admin/tools"
-                            class="list-group-item list-group-item-action bg-transparent text-danger border-top border-dark">
-                            <i class="bi bi-shield-lock"></i> Admin Tools (Restricted)
-                        </a>
+                <a href="/admin/tools" class="nav-link admin-link"><i class="fa-solid fa-terminal"></i> Admin Tools</a>
+            </div>
+            <div class="p-3 border-top bg-light">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <img src="https://ui-avatars.com/api/?name=<%= user.username %>&background=0D8ABC&color=fff"
+                        class="rounded-circle" width="32">
+                    <div class="small fw-bold">
+                        <%= user.username %>
                     </div>
                 </div>
+                <a href="/logout" class="btn btn-outline-danger btn-sm w-100">Sign Out</a>
             </div>
+        </nav>
 
-            <!-- Main Content: Wall of Shame -->
-            <div class="col-md-9">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span class="text-blue">&gt; PUBLIC_WALL</span>
-                        <span class="badge bg-dark border border-secondary text-secondary">LIVE FEED</span>
+        <!-- CONTENT SCROLLABLE -->
+        <main class="main-content">
+
+            <!-- HEADER -->
+            <header class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 class="fw-bold mb-1">Student Dashboard</h2>
+                    <p class="text-muted">Academic Year 2025-2026</p>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4"><i class="fa-solid fa-download me-2"></i>Download
+                    Report</button>
+            </header>
+
+            <!-- GRADES SECTION -->
+            <section id="grades" class="course-section">
+                <h4 class="section-title"><i class="fa-solid fa-chart-line"></i> Academic Performance</h4>
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="card p-4 text-center h-100">
+                            <div class="text-muted small fw-bold text-uppercase mb-2">Current GPA</div>
+                            <h1 class="display-4 fw-bold text-primary mb-0">3.8</h1>
+                            <span class="text-success small fw-bold"><i class="fa-solid fa-arrow-up"></i> Top 5%</span>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <!-- Comment Form -->
-                        <form action="/dashboard/comment" method="POST" class="mb-4">
-                            <div class="input-group">
-                                <span class="input-group-text bg-dark border-secondary text-secondary">&gt;</span>
-                                <input type="text" name="comment"
-                                    class="form-control bg-dark text-white border-secondary font-monospace"
-                                    placeholder="Write something on the wall..." required>
-                                <button class="btn btn-outline-success" type="submit">POST</button>
-                            </div>
-                        </form>
-
-                        <hr class="border-secondary">
-
-                        <!-- Comments Feed (VULNERABLE TO STORED XSS) -->
-                        <h5 class="text-muted mb-3">Recent Messages:</h5>
-
-                        <% if (comments.length> 0) { %>
-                            <% comments.forEach(comment=> { %>
-                                <div class="wall-comment">
-                                    <small class="text-green opacity-75">
-                                        <%= comment.author %> says:
-                                    </small>
-                                    <div class="mt-1 text-light">
-                                        <!-- VULNERABILITY: Stored XSS -->
-                                        <!-- Outputting raw HTML allowing script injection -->
-                                        <%- comment.text %>
+                    <!-- Mini Cards -->
+                    <div class="col-md-9">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card p-3 d-flex flex-row align-items-center gap-3">
+                                    <div class="bg-success text-white rounded p-3"><i class="fa-brands fa-apple"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0 fw-bold">95%</h5>
+                                        <div class="small text-muted">CSS 214 (iOS)</div>
                                     </div>
                                 </div>
-                                <% }); %>
-                                    <% } else { %>
-                                        <p class="text-center text-muted py-3">No messages yet. Be the first.</p>
-                                        <% } %>
-
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card p-3 d-flex flex-row align-items-center gap-3">
+                                    <div class="bg-warning text-dark rounded p-3"><i
+                                            class="fa-solid fa-network-wired"></i></div>
+                                    <div>
+                                        <h5 class="mb-0 fw-bold">90%</h5>
+                                        <div class="small text-muted">CSS 312 (Net)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card p-3 d-flex flex-row align-items-center gap-3">
+                                    <div class="bg-info text-white rounded p-3"><i
+                                            class="fa-solid fa-shield-halved"></i></div>
+                                    <div>
+                                        <h5 class="mb-0 fw-bold">80%</h5>
+                                        <div class="small text-muted">CSS 361 (Sec)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- COURSES SECTION -->
+            <section id="courses" class="course-section">
+                <h4 class="section-title"><i class="fa-solid fa-book"></i> Current Courses</h4>
+                <div class="card overflow-hidden">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4 py-3">Course Code</th>
+                                <th>Subject Name</th>
+                                <th>Instructor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">CSS 214</td>
+                                <td class="fw-medium">Intro to iOS Programming</td>
+                                <td class="small text-muted">Steve Jobs</td>
+                                <td><span
+                                        class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Completed</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">CSS 312</td>
+                                <td class="fw-medium">Computer Networks</td>
+                                <td class="small text-muted">Vint Cerf</td>
+                                <td><span
+                                        class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Finalized</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">CSS 361</td>
+                                <td class="fw-medium">Web Application Security</td>
+                                <td class="small text-muted">Mr. Robot</td>
+                                <td><span
+                                        class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Active</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">CSS 382</td>
+                                <td class="fw-medium">Industrial Practice</td>
+                                <td class="small text-muted">Elon Musk</td>
+                                <td><span
+                                        class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Internship</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">INF 346</td>
+                                <td class="fw-medium">UX/UI Design</td>
+                                <td class="small text-muted">Jony Ive</td>
+                                <td><span
+                                        class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Completed</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SCHEDULE SECTION -->
+            <section id="schedule" class="course-section">
+                <h4 class="section-title"><i class="fa-regular fa-calendar"></i> Weekly Timetable</h4>
+                <div class="card p-4">
+                    <div class="table-responsive">
+                        <table class="table table-borderless text-center align-middle">
+                            <thead class="text-secondary small text-uppercase font-monospace border-bottom">
+                                <tr>
+                                    <th style="width: 10%">Time</th>
+                                    <th>Monday</th>
+                                    <th>Wednesday</th>
+                                    <th>Friday</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted small">09:00 AM</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>
+                                        <div class="p-2 bg-info-subtle text-info rounded small fw-bold">
+                                            INF 346 (UX/UI)<br>Lab 202
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted small">10:00 AM</td>
+                                    <td>
+                                        <div class="p-2 bg-primary-subtle text-primary rounded small fw-bold">
+                                            CSS 214 (iOS)<br>Mac Lab
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted small">02:00 PM</td>
+                                    <td></td>
+                                    <td>
+                                        <div class="p-2 bg-warning-subtle text-warning rounded small fw-bold text-dark">
+                                            CSS 361 (Security)<br>Room 404
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NEWS & FORUM SECTION (XSS Vulnerability) -->
+            <section id="news" class="course-section">
+                <h4 class="section-title"><i class="fa-regular fa-newspaper"></i> University News & Anonymous Feedback
+                </h4>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="forum-bg">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Student Voice</h5>
+                                <span class="badge bg-danger">Unmoderated Zone</span>
+                            </div>
+
+                            <!-- XSS Form -->
+                            <form action="/dashboard/comment" method="POST" class="mb-5">
+                                <label class="form-label text-muted small fw-bold">LEAVE A COMMENT</label>
+                                <div class="input-group">
+                                    <input type="text" name="comment" class="form-control"
+                                        placeholder="Type your message here..." required>
+                                    <button class="btn btn-dark" type="submit"><i
+                                            class="fa-solid fa-paper-plane me-2"></i>Send</button>
+                                </div>
+                            </form>
+
+                            <!-- XSS Output -->
+                            <div class="comments-list">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">Recent Comments</h6>
+
+                                <% if (comments.length> 0) { %>
+                                    <% [...comments].reverse().forEach(comment=> { %>
+                                        <div class="comment-item">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <span class="badge bg-light text-dark border text-uppercase"
+                                                    style="font-size: 10px;">
+                                                    <%= comment.author %>
+                                                </span>
+                                                <small class="text-muted" style="font-size: 10px;">Just now</small>
+                                            </div>
+                                            <div class="ms-1">
+                                                <!-- VULNERABILITY IS HERE -->
+                                                <%- comment.text %>
+                                            </div>
+                                        </div>
+                                        <% }); %>
+                                            <% } else { %>
+                                                <p class="text-muted small">No comments yet.</p>
+                                                <% } %>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card p-3 bg-primary text-white h-100">
+                            <h5 class="fw-bold"><i class="fa-solid fa-bullhorn me-2"></i>Announcements</h5>
+                            <ul class="list-unstyled mt-3 d-flex flex-column gap-3">
+                                <li class="d-flex gap-2">
+                                    <i class="fa-solid fa-circle-exclamation mt-1"></i>
+                                    <span class="small">Exam Registration deadline is approaching next Friday.</span>
+                                </li>
+                                <li class="d-flex gap-2">
+                                    <i class="fa-solid fa-wifi mt-1"></i>
+                                    <span class="small">Campus Wi-Fi maintenance scheduled for Sunday 2 AM.</span>
+                                </li>
+                                <li class="d-flex gap-2">
+                                    <i class="fa-solid fa-trophy mt-1"></i>
+                                    <span class="small">CTF Team selection starts tomorrow in Room 101.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FOOTER -->
+            <footer class="mt-5 pt-5 pb-3 border-top text-center text-muted small">
+                &copy; 2025 CyberState University. All Rights Reserved. <br>
+                Secure Portal v4.0.1
+            </footer>
+
+        </main>
     </div>
+
 </body>
 
 </html>

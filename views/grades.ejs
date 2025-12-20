@@ -4,115 +4,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grades - University Portal</title>
-    <!-- Bootstrap 5 CDN -->
+    <title>My Grades - CyberState University</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+
     <style>
         body {
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
 
-        .navbar {
-            background-color: #000 !important;
+        /* Sidebar styling (Duplicated for consistency) */
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem;
+            color: #0d6efd;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .nav-link {
+            color: #4b5563;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: #eff6ff;
+            color: #0d6efd;
+        }
+
+        .admin-link {
+            color: #dc3545 !important;
+        }
+
+        .admin-link:hover {
+            background-color: #fef2f2 !important;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
         }
     </style>
 </head>
 
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="/dashboard">
-                <i class="bi bi-mortarboard-fill me-2"></i>UniPortal
-            </a>
-            <div class="collapse navbar-collapse justify-content-end">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#">Grades</a>
-                    </li>
-                    <li class="nav-item ms-2">
-                        <a class="btn btn-outline-light btn-sm rounded-0" href="/logout">Logout</a>
-                    </li>
-                </ul>
-            </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-user-graduate"></i> CyberState
         </div>
-    </nav>
+        <nav class="nav-links">
+            <a href="/dashboard" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-book-open"></i> My Courses</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Schedule</a>
+            <a href="#" class="nav-link active"><i class="fa-solid fa-file-invoice"></i> Grades</a>
+            <a href="#" class="nav-link"><i class="fa-solid fa-newspaper"></i> News</a>
+            <hr class="my-3 border-light">
+            <a href="/admin/tools" class="nav-link admin-link"><i class="fa-solid fa-lock"></i> Admin Tools</a>
+        </nav>
+        <div class="p-3 border-top">
+            <a href="/logout" class="btn btn-outline-secondary w-100 btn-sm"><i class="fa-solid fa-sign-out-alt"></i>
+                Logout</a>
+        </div>
+    </aside>
 
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="container-fluid">
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0 text-dark fw-bold">Academic Performance</h2>
-                    <a href="/dashboard" class="btn btn-outline-dark rounded-0">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-                    </a>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-dark mb-1">Academic Record</h2>
+                    <p class="text-muted mb-0">Official transcript view.</p>
                 </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-print me-2"></i>Print
+                        Transcript</button>
+                </div>
+            </div>
 
-                <div class="card shadow-sm border-0 rounded-0">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <!-- IDOR Vulnerability Context -->
-                        <h5 class="mb-0 text-muted">
-                            <i class="bi bi-person-badge me-2"></i>
-                            Student ID: <span class="text-dark fw-bold">
-                                <%= student_id %>
-                            </span>
-                        </h5>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-id-card text-primary"></i>
+                        <span class="fw-bold text-dark">Student ID: <%= student_id %></span>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0">
-                                <thead class="table-light">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-secondary text-uppercase small">
+                            <tr>
+                                <th class="ps-4 py-3">Subject / Course</th>
+                                <th class="py-3">Grade</th>
+                                <th class="py-3 text-end pe-4">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (grades.length> 0) { %>
+                                <% grades.forEach(grade=> { %>
                                     <tr>
-                                        <th scope="col" class="ps-4 py-3">Subject</th>
-                                        <th scope="col" class="py-3">Score</th>
-                                        <th scope="col" class="py-3 text-end pe-4">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% if (grades.length> 0) { %>
-                                        <% grades.forEach(grade=> { %>
-                                            <tr>
-                                                <td class="ps-4 fw-medium">
-                                                    <%= grade.subject %>
-                                                </td>
-                                                <td>
-                                                    <!-- Monochrome Badges: Dark, Secondary, and Bordered Light -->
+                                        <td class="ps-4 fw-medium text-dark">
+                                            <%= grade.subject %>
+                                        </td>
+                                        <td>
+                                            <% if (grade.score>= 90) { %>
+                                                <span
+                                                    class="badge bg-success-subtle text-success border border-success-subtle px-3 rounded-pill">
+                                                    <%= grade.score %> (A)
+                                                </span>
+                                                <% } else if (grade.score>= 80) { %>
                                                     <span
-                                                        class="badge rounded-0 <%= grade.score >= 90 ? 'bg-dark' : (grade.score >= 70 ? 'bg-secondary' : 'bg-light text-dark border border-dark') %>">
-                                                        <%= grade.score %>
+                                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 rounded-pill">
+                                                        <%= grade.score %> (B)
                                                     </span>
-                                                </td>
-                                                <td class="text-end pe-4 text-muted">
-                                                    <%= grade.score>= 50 ? 'Passed' : 'Failed' %>
+                                                    <% } else if (grade.score>= 70) { %>
+                                                        <span
+                                                            class="badge bg-info-subtle text-info border border-info-subtle px-3 rounded-pill">
+                                                            <%= grade.score %> (C)
+                                                        </span>
+                                                        <% } else { %>
+                                                            <span
+                                                                class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 rounded-pill">
+                                                                <%= grade.score %> (F)
+                                                            </span>
+                                                            <% } %>
+                                        </td>
+                                        <td class="text-end pe-4 text-muted small">
+                                            <%= grade.score>= 90 ? 'Excellent' : (grade.score >= 80 ? 'Good' :
+                                                (grade.score >= 50 ? 'Passed' : 'Retake Required')) %>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="3" class="text-center py-5 text-muted">No records found.
                                                 </td>
                                             </tr>
-                                            <% }); %>
-                                                <% } else { %>
-                                                    <tr>
-                                                        <td colspan="3" class="text-center py-5 text-muted">
-                                                            No grade records found for this student ID.
-                                                        </td>
-                                                    </tr>
-                                                    <% } %>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-light text-muted small text-center">
-                        CONFIDENTIAL RECORD
-                    </div>
+                                            <% } %>
+                        </tbody>
+                    </table>
                 </div>
-
+                <div class="card-footer bg-light text-center py-3">
+                    <small class="text-muted">GPA is calculated based on the last 2 semesters.</small>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
