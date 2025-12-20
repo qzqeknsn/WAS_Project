@@ -1,113 +1,129 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - University Portal</title>
+    <title>Dashboard - Corporate Portal</title>
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         body {
-            background-color: #f8f9fa;
-        }
-
-        .hero-section {
-            background: white;
-            padding: 3rem 0;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #dee2e6;
+            background-color: #0d1117;
+            font-family: 'Courier New', monospace;
         }
 
         .navbar {
-            background-color: #000 !important;
+            border-bottom: 1px solid #30363d;
+            background-color: #161b22;
+        }
+
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+        }
+
+        .text-green {
+            color: #2ea043;
+        }
+
+        .text-blue {
+            color: #58a6ff;
+        }
+
+        .wall-comment {
+            border-left: 3px solid #30363d;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
 
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark p-3">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/dashboard">
-                <i class="bi bi-mortarboard-fill me-2"></i>UniPortal
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item me-3">
-                        <span class="text-white">Welcome, <strong>
-                                <%= user.username %>
-                            </strong></span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/dashboard">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <!-- IDOR Vulnerability Link -->
-                        <a class="nav-link" href="/grades?student_id=<%= user.id %>">My Grades</a>
-                    </li>
-                    <li class="nav-item ms-2">
-                        <a class="btn btn-outline-light btn-sm rounded-0" href="/logout">Logout</a>
-                    </li>
-                </ul>
+            <a class="navbar-brand text-green fw-bold" href="#">&gt; CORP_PORTAL</a>
+            <div class="d-flex align-items-center">
+                <span class="text-secondary me-3">USER: <span class="text-white">
+                        <%= user.username %>
+                    </span></span>
+                <span class="text-secondary me-3">ROLE: <span class="badge bg-secondary font-monospace">
+                        <%= user.role %>
+                    </span></span>
+                <a href="/logout" class="btn btn-sm btn-outline-danger font-monospace">LOGOUT</a>
             </div>
         </div>
     </nav>
 
-    <!-- Hero / Search Section -->
-    <div class="hero-section">
-        <div class="container text-center">
-            <h1 class="display-5 mb-4 fw-bold">Course Search</h1>
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <form action="/dashboard" method="GET" class="d-flex gap-2">
-                        <input type="text" name="q" class="form-control form-control-lg rounded-0"
-                            placeholder="Search for subjects..." value="<%= query || '' %>">
-                        <button type="submit" class="btn btn-dark btn-lg px-4 rounded-0">Search</button>
-                    </form>
+    <div class="container mt-5">
+        <div class="row">
+            <!-- Sidebar / Menu -->
+            <div class="col-md-3">
+                <div class="card mb-3">
+                    <div class="card-header text-muted">&gt; MENU</div>
+                    <div class="list-group list-group-flush">
+                        <a href="/dashboard"
+                            class="list-group-item list-group-item-action active bg-secondary border-0">General
+                            Dashboard</a>
+                        <a href="#" class="list-group-item list-group-item-action bg-transparent text-secondary">My
+                            Profile</a>
+
+                        <!-- Link accessible only if Admin (but shown to tempt attacker) -->
+                        <a href="/admin/tools"
+                            class="list-group-item list-group-item-action bg-transparent text-danger border-top border-dark">
+                            <i class="bi bi-shield-lock"></i> Admin Tools (Restricted)
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content: Wall of Shame -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="text-blue">&gt; PUBLIC_WALL</span>
+                        <span class="badge bg-dark border border-secondary text-secondary">LIVE FEED</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Comment Form -->
+                        <form action="/dashboard/comment" method="POST" class="mb-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary">&gt;</span>
+                                <input type="text" name="comment"
+                                    class="form-control bg-dark text-white border-secondary font-monospace"
+                                    placeholder="Write something on the wall..." required>
+                                <button class="btn btn-outline-success" type="submit">POST</button>
+                            </div>
+                        </form>
+
+                        <hr class="border-secondary">
+
+                        <!-- Comments Feed (VULNERABLE TO STORED XSS) -->
+                        <h5 class="text-muted mb-3">Recent Messages:</h5>
+
+                        <% if (comments.length> 0) { %>
+                            <% comments.forEach(comment=> { %>
+                                <div class="wall-comment">
+                                    <small class="text-green opacity-75">
+                                        <%= comment.author %> says:
+                                    </small>
+                                    <div class="mt-1 text-light">
+                                        <!-- VULNERABILITY: Stored XSS -->
+                                        <!-- Outputting raw HTML allowing script injection -->
+                                        <%- comment.text %>
+                                    </div>
+                                </div>
+                                <% }); %>
+                                    <% } else { %>
+                                        <p class="text-center text-muted py-3">No messages yet. Be the first.</p>
+                                        <% } %>
+
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Results Section -->
-    <div class="container">
-        <% if (query) { %>
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="card shadow-sm border-0 rounded-0">
-                        <div class="card-header bg-white border-bottom-0 pt-4">
-                            <h5 class="card-title text-dark fw-bold"><i class="bi bi-search me-2"></i>Search Results
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-light border rounded-0">
-                                <!-- SECURITY FIX: Reflected XSS -->
-                                <!-- We swapped <%- %> (raw) for <%= %> (escaped). Scripts will now render as text. -->
-                                Results for: <strong>
-                                    <%= query %>
-                                </strong>
-                            </div>
-                            <p class="text-muted text-center py-4">
-                                <i class="bi bi-inbox display-4 d-block mb-3 opacity-25"></i>
-                                No active courses found matching your criteria (Demo Mode).
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <% } else { %>
-                <div class="text-center text-muted mt-5">
-                    <p>Use the search bar above to find your courses.</p>
-                </div>
-                <% } %>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

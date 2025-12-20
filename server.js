@@ -1,7 +1,7 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
-const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const { exec } = require('child_process');
 const path = require('path');
 
 const app = express();
@@ -11,57 +11,39 @@ const PORT = 3000;
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-    secret: 'super_secret_insecure_key',
-    resave: false,
-    saveUninitialized: true
-}));
+app.use(cookieParser()); // VULNERABILITY: No secret used, so cookies are not signed.
 
-// Database Setup
-const db = new sqlite3.Database(':memory:'); // In-memory DB for easy setup
+// In-memory "Database"
+const comments = []; // For Stored XSS
 
-function setupDB() {
-    db.serialize(() => {
-        // Create Users Table
-        db.run("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT, role TEXT)");
+// VULNERABILITY 1: Broken Authentication (Insecure Cookie)
+// Middleware to read session from 'session_data' cookie (Base64 JSON)
+// NO INTEGRITY CHECK!
+const authMiddleware = (req, res, next) => {
+    const sessionCookie = req.cookies.session_data;
 
-        // Insert Users (Passwords in plaintext as requested)
-        const users = [
-            ['admin', 'admin123', 'admin'],
-            ['student1', '12345', 'student'], // ID will be 2
-            ['student2', 'qwerty', 'student'] // ID will be 3
-        ];
+    if (sessionCookie) {
+        try {
+            // Decode Base64 to String
+            const jsonStr = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+            // Parse JSON
+            req.user = JSON.parse(jsonStr);
+        } catch (e) {
+            console.error("Failed to parse session cookie:", e.message);
+            // Incorrect cookie format, user remains undefined
+        }
+    }
+    next();
+};
 
-        const stmt = db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
-        users.forEach(user => stmt.run(user));
-        stmt.finalize();
-
-        // Create Grades Table
-        db.run("CREATE TABLE grades (id INTEGER PRIMARY KEY, student_id INTEGER, subject TEXT, score INTEGER)");
-
-        // Insert Grades
-        const grades = [
-            [2, 'Math', 95],
-            [2, 'Physics', 88],
-            [2, 'History', 90],
-            [3, 'Math', 70],
-            [3, 'Physics', 65],
-            [3, 'Chemistry', 82]
-        ];
-
-        const gradeStmt = db.prepare("INSERT INTO grades (student_id, subject, score) VALUES (?, ?, ?)");
-        grades.forEach(grade => gradeStmt.run(grade));
-        gradeStmt.finalize();
-
-        console.log("Database initialized with test data.");
-    });
-}
-
-setupDB();
+app.use(authMiddleware);
 
 // Routes
 
 app.get('/', (req, res) => {
+    if (req.user) {
+        return res.redirect('/dashboard');
+    }
     res.redirect('/login');
 });
 
@@ -70,77 +52,105 @@ app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// LOGIN - POST with SQL Injection FIXED
+// LOGIN - POST
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
-    // SECURITY FIX: Use parameterized queries (Prepared Statements)
-    // This prevents SQL Injection by treating inputs as data, not executable code
-    const sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+    // Hardcoded credentials for demo
+    // student / student123
+    // admin / admin_super_secure_password (Not intended to be guessed, intent is to steal session)
 
-    // Log safe version for debugging
-    console.log(`Attempting login for user: ${username}`);
+    if (username === 'student' && password === 'student123') {
+        // VULNERABILITY: INSECURE COOKIE CREATION
+        // We create a JSON object and encode it in Base64.
+        // There is NO signature, so the user can edit this on the client side!
+        const sessionObj = {
+            username: 'student',
+            role: 'user' // ATTACK GOAL: Change this to 'admin'
+        };
+        const sessionStr = JSON.stringify(sessionObj);
+        const base64Session = Buffer.from(sessionStr).toString('base64');
 
-    db.get(sql, [username, password], (err, row) => {
-        if (err) {
-            console.error(err);
-            return res.render('login', { error: "Database error" });
-        }
+        res.cookie('session_data', base64Session, { httpOnly: true }); // httpOnly doesn't stop manual editing in DevTools/Burp
+        return res.redirect('/dashboard');
+    }
 
-        if (row) {
-            // Login successful
-            req.session.user = { id: row.id, username: row.username, role: row.role };
-            res.redirect('/dashboard');
-        } else {
-            res.render('login', { error: "Invalid credentials" });
-        }
-    });
+    // For admin login demo (if they knew the pass)
+    if (username === 'admin' && password === 'admin_super_secure_password') {
+        const sessionObj = { username: 'admin', role: 'admin' };
+        const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
+        res.cookie('session_data', base64Session, { httpOnly: true });
+        return res.redirect('/dashboard');
+    }
+
+    res.render('login', { error: "Invalid credentials (try: student / student123)" });
 });
 
-// Dashboard with Reflected XSS Vulnerability
+// DASHBOARD
 app.get('/dashboard', (req, res) => {
-    if (!req.session.user) {
+    if (!req.user) {
         return res.redirect('/login');
     }
-
-    // The 'q' parameter is passed to the view
-    // The FIX involves changing how it is rendered in the EJS template (using <%= %> instead of <%- %>)
-    const query = req.query.q;
-    res.render('dashboard', { user: req.session.user, query: query });
+    // Render dashboard with user info and comments
+    res.render('dashboard', { user: req.user, comments: comments });
 });
 
-// Grades with IDOR Vulnerability FIXED
-app.get('/grades', (req, res) => {
-    if (!req.session.user) {
-        return res.redirect('/login');
-    }
-
-    // SECURITY FIX: Access Control Check
-    // We check if the requested student_id matches the logged-in user's ID.
-    // (In a real app, Admins might be allowed to view others, but here we enforce strict ownership)
-
-    let requestedId = req.query.student_id ? parseInt(req.query.student_id) : req.session.user.id;
-    const currentUserId = req.session.user.id;
-
-    if (requestedId !== currentUserId) {
-        // Simple Access Denied
-        return res.status(403).send("<h1>403 Forbidden</h1><p>You are not authorized to view these grades.</p><a href='/dashboard'>Back to Dashboard</a>");
-    }
-
-    const sql = "SELECT * FROM grades WHERE student_id = ?";
-
-    db.all(sql, [requestedId], (err, rows) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send("Database error");
-        }
-        res.render('grades', { grades: rows, student_id: requestedId });
-    });
-});
-
+// LOGOUT
 app.get('/logout', (req, res) => {
-    req.session.destroy();
+    res.clearCookie('session_data');
     res.redirect('/login');
+});
+
+// VULNERABILITY 2: Stored XSS
+app.post('/dashboard/comment', (req, res) => {
+    if (!req.user) return res.redirect('/login');
+
+    const { comment } = req.body;
+    // Add to array WITHOUT SANITIZATION
+    // If comment contains <script>...</script>, it will be served as code.
+    if (comment) {
+        comments.push({
+            author: req.user.username,
+            text: comment
+        });
+    }
+    res.redirect('/dashboard');
+});
+
+// VULNERABILITY 3: Command Injection (RCE)
+// ONLY for Admins
+app.get('/admin/tools', (req, res) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).send("<h1>403 Forbidden</h1><p>Access Restricted to Admins.</p>");
+    }
+    res.render('admin', { output: null });
+});
+
+app.post('/admin/ping', (req, res) => {
+    // Check Admin Access again
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).send("Forbidden");
+    }
+
+    const { ip } = req.body;
+
+    // VULNERABILITY: COMMAND INJECTION
+    // We concatenate user input DIRECTLY into a shell command.
+    // Platform specific ping count flag (-c for *nix, -n for Windows). assuming Mac/Linux here based on USER_INFO.
+    const command = `ping -c 2 ${ip}`;
+
+    console.log(`Executing: ${command}`);
+
+    exec(command, (error, stdout, stderr) => {
+        let output = stdout;
+        if (error) {
+            output += `\nError: ${error.message}`;
+        }
+        if (stderr) {
+            output += `\nStderr: ${stderr}`;
+        }
+        res.render('admin', { output: output });
+    });
 });
 
 app.listen(PORT, () => {

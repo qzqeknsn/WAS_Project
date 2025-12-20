@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Tools - Corporate Portal</title>
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d1117;
+            font-family: 'Courier New', monospace;
+        }
+
+        .navbar {
+            border-bottom: 1px solid #30363d;
+            background-color: #161b22;
+        }
+
+        .console-output {
+            background-color: #000;
+            color: #2ea043;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark p-3 mb-4">
+        <div class="container">
+            <span class="navbar-brand text-danger fw-bold">&gt; ADMIN_PANEL</span>
+            <a href="/dashboard" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card border-danger bg-transparent mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <i class="bi bi-exclamation-triangle"></i> RESTRICTED ACCESS AREA
+                    </div>
+                    <div class="card-body bg-dark">
+                        <h5 class="card-title text-light">Server Diagnostics Tool</h5>
+                        <p class="text-muted">Use this tool to verify network connectivity (Ping).</p>
+
+                        <form action="/admin/ping" method="POST" class="d-flex gap-2 mb-3">
+                            <input type="text" name="ip"
+                                class="form-control font-monospace bg-black text-white border-secondary"
+                                placeholder="Enter IP Address (e.g. 8.8.8.8)" required>
+                            <button type="submit" class="btn btn-danger font-monospace">EXECUTE</button>
+                        </form>
+                    </div>
+                </div>
+
+                <% if (output) { %>
+                    <h6 class="text-muted mb-2">&gt; TERMINAL_OUTPUT:</h6>
+                    <div class="console-output shadow-sm">
+                        <!-- VULNERABILITY: RCE Output -->
+                        <%= output %>
+                    </div>
+                    <% } %>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
