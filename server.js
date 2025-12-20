@@ -1,158 +1,234 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const sqlite3 = require('sqlite3').verbose();
 const { exec } = require('child_process');
 const path = require('path');
 
 const app = express();
 const PORT = 3000;
 
-// Middleware
+// === НАСТРОЙКИ ===
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser()); // VULNERABILITY: No secret used, so cookies are not signed.
+app.use(cookieParser());
 
-// In-memory "Database"
-const comments = []; // For Stored XSS
+// === БАЗА ДАННЫХ (В памяти) ===
+const db = new sqlite3.Database(':memory:');
 
-// VULNERABILITY 1: Broken Authentication (Insecure Cookie)
-// Middleware to read session from 'session_data' cookie (Base64 JSON)
-// NO INTEGRITY CHECK!
-const authMiddleware = (req, res, next) => {
-    const sessionCookie = req.cookies.session_data;
+db.serialize(() => {
+    // 1. Таблица Пользователей
+    db.run("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT, role TEXT)");
 
-    if (sessionCookie) {
-        try {
-            // Decode Base64 to String
-            const jsonStr = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-            // Parse JSON
-            req.user = JSON.parse(jsonStr);
-        } catch (e) {
-            console.error("Failed to parse session cookie:", e.message);
-            // Incorrect cookie format, user remains undefined
-        }
-    }
-    next();
-};
+    const stmt = db.prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
+    stmt.run("student", "student123", "user");
+    stmt.run("admin", "admin_super_secret", "admin");
+    stmt.finalize();
 
-app.use(authMiddleware);
+    // 2. Таблица Комментариев
+    db.run("CREATE TABLE comments (id INTEGER PRIMARY KEY, author TEXT, text TEXT, date TEXT)");
 
-// Routes
+    // ИСПРАВЛЕНО: Теперь вставляем данные безопасно через stmt.run
+    const commentStmt = db.prepare("INSERT INTO comments (author, text, date) VALUES (?, ?, ?)");
+    commentStmt.run('Alice', 'Does anyone have notes for Cryptography 101?', '2025-12-19 10:00');
+    commentStmt.run('Bob', "Don't forget the deadline for the final project!", '2025-12-19 12:30');
+    commentStmt.finalize();
 
-app.get('/', (req, res) => {
-    if (req.user) {
-        return res.redirect('/dashboard');
-    }
-    res.redirect('/login');
+    console.log(">>> Database initialized with mock data.");
 });
 
-// LOGIN - GET
+// === C2 SERVER STORAGE (KILLER FEATURE) ===
+const stolenData = [];
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+function getUserFromCookie(req) {
+    if (!req.cookies.session_data) return null;
+    try {
+        const base64Data = req.cookies.session_data;
+        const jsonData = Buffer.from(base64Data, 'base64').toString('utf-8');
+        return JSON.parse(jsonData);
+    } catch (e) {
+        return null;
+    }
+}
+
+// === РОУТЫ ===
+
+app.get('/', (req, res) => {
+    const user = getUserFromCookie(req);
+    if (user) {
+        res.redirect('/dashboard');
+    } else {
+        res.redirect('/login');
+    }
+});
+
 app.get('/login', (req, res) => {
     res.render('login', { error: null });
 });
 
-// LOGIN - POST
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
-    // Hardcoded credentials for demo
-    // student / student123
-    // admin / admin_super_secure_password (Not intended to be guessed, intent is to steal session)
+    // УЯЗВИМОСТЬ: BROKEN AUTH (Подделка куки)
+    db.get("SELECT * FROM users WHERE username = ? AND password = ?", [username, password], (err, row) => {
+        if (row) {
+            const sessionObj = {
+                username: row.username,
+                role: row.role
+            };
+            const cookieValue = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
+            res.cookie('session_data', cookieValue, { httpOnly: false });
+            res.redirect('/dashboard');
+            res.redirect('/dashboard');
+        } else {
+            // === CREDENTIAL HARVESTING (Перехват паролей) ===
+            const time = new Date().toLocaleTimeString();
+            console.log(`[C2 LOG] Failed Login: ${username} | ${password}`);
+            stolenData.unshift({
+                time: time,
+                ip: req.ip,
+                type: 'FAILED_LOGIN_ATTEMPT',
+                data: `Login: ${username} | Pass: ${password}`
+            });
 
-    if (username === 'student' && password === 'student123') {
-        // VULNERABILITY: INSECURE COOKIE CREATION
-        // We create a JSON object and encode it in Base64.
-        // There is NO signature, so the user can edit this on the client side!
-        const sessionObj = {
-            username: 'student',
-            role: 'user' // ATTACK GOAL: Change this to 'admin'
-        };
-        const sessionStr = JSON.stringify(sessionObj);
-        const base64Session = Buffer.from(sessionStr).toString('base64');
-
-        res.cookie('session_data', base64Session, { httpOnly: true }); // httpOnly doesn't stop manual editing in DevTools/Burp
-        return res.redirect('/dashboard');
-    }
-
-    // For admin login demo (if they knew the pass)
-    if (username === 'admin' && password === 'admin_super_secure_password') {
-        const sessionObj = { username: 'admin', role: 'admin' };
-        const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
-        res.cookie('session_data', base64Session, { httpOnly: true });
-        return res.redirect('/dashboard');
-    }
-
-    res.render('login', { error: "Invalid credentials (try: student / student123)" });
+            res.render('login', { error: "Invalid username or password" });
+        }
+    });
 });
 
-// DASHBOARD
-app.get('/dashboard', (req, res) => {
-    if (!req.user) {
-        return res.redirect('/login');
-    }
-    // Render dashboard with user info and comments
-    res.render('dashboard', { user: req.user, comments: comments });
+res.redirect('/login');
 });
 
-// LOGOUT
-app.get('/logout', (req, res) => {
-    res.clearCookie('session_data');
-    res.redirect('/login');
-});
+// === C2 SPY ROUTES ===
 
-// VULNERABILITY 2: Stored XSS
-app.post('/dashboard/comment', (req, res) => {
-    if (!req.user) return res.redirect('/login');
-
-    const { comment } = req.body;
-    // Add to array WITHOUT SANITIZATION
-    // If comment contains <script>...</script>, it will be served as code.
-    if (comment) {
-        comments.push({
-            author: req.user.username,
-            text: comment
+// 1. Шпионский роут (принимает данные скрытно)
+app.get('/steal', (req, res) => {
+    const { data, type } = req.query;
+    if (data) {
+        stolenData.unshift({
+            time: new Date().toLocaleTimeString(),
+            ip: req.ip,
+            type: type || 'UNKNOWN',
+            data: data
         });
     }
-    res.redirect('/dashboard');
+    // Возвращаем "Ничего" (204 No Content), чтобы жертва не заметила подвоха
+    res.status(204).send();
 });
 
-// VULNERABILITY 3: Command Injection (RCE)
-// ONLY for Admins
+// 2. Панель Хакера (Dark Web Interface)
+app.get('/darkweb', (req, res) => {
+    let rows = stolenData.map(item => `
+        <tr>
+            <td>${item.time}</td>
+            <td>${item.ip}</td>
+            <td style="color: #0f0;">${item.type}</td>
+            <td style="color: #fff;">${item.data}</td>
+        </tr>
+    `).join('');
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>C2 SERVER :: ACCESS TERMINAL</title>
+        <meta http-equiv="refresh" content="2"> <!-- Auto-refresh every 2s -->
+        <style>
+            body { background-color: #000; color: #00ff00; font-family: 'Courier New', monospace; padding: 20px; }
+            h1 { border-bottom: 2px solid #00ff00; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+            th { color: #fff; background: #111; }
+            .blink { animation: blinker 1s linear infinite; }
+            @keyframes blinker { 50% { opacity: 0; } }
+            .header { display: flex; justify-content: space-between; align-items: center; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>💀 C2 SERVER :: CREDENTIAL HARVESTER</h1>
+            <div class="blink">[LISTENING...]</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>TIME</th>
+                    <th>IP ADDRESS</th>
+                    <th>EVENT TYPE</th>
+                    <th>CAPTURED DATA</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.length > 0 ? rows : '<tr><td colspan="4" style="text-align:center; color:#555;">...WAITING FOR INCOMING DATA...</td></tr>'}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+    res.send(html);
+});
+
+app.get('/dashboard', (req, res) => {
+    const user = getUserFromCookie(req);
+    if (!user) return res.redirect('/login');
+
+    db.all("SELECT * FROM comments ORDER BY id DESC", (err, rows) => {
+        res.render('dashboard', { user: user, comments: rows });
+    });
+});
+
+app.post('/dashboard/comment', (req, res) => {
+    const user = getUserFromCookie(req);
+    if (!user) return res.redirect('/login');
+
+    const text = req.body.comment; // Frontend uses name="comment"
+    const date = new Date().toLocaleString();
+
+    // УЯЗВИМОСТЬ: STORED XSS (Вставка без проверки)
+    const stmt = db.prepare("INSERT INTO comments (author, text, date) VALUES (?, ?, ?)");
+    stmt.run(user.username, text, date, () => {
+        res.redirect('/dashboard#news');
+    });
+    stmt.finalize();
+});
+
 app.get('/admin/tools', (req, res) => {
-    if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).send("<h1>403 Forbidden</h1><p>Access Restricted to Admins.</p>");
+    const user = getUserFromCookie(req);
+
+    if (!user || user.role !== 'admin') {
+        return res.status(403).send(`
+            <h1 style="color:red; text-align:center; margin-top:50px;">ACCESS DENIED</h1>
+            <p style="text-align:center;">You are logged in as <b>${user ? user.username : 'Guest'}</b>.</p>
+            <p style="text-align:center;">Administrator privileges required.</p>
+            <center><a href="/dashboard">Go Back</a></center>
+        `);
     }
     res.render('admin', { output: null });
 });
 
 app.post('/admin/ping', (req, res) => {
-    // Check Admin Access again
-    if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).send("Forbidden");
-    }
+    const user = getUserFromCookie(req);
+    if (!user || user.role !== 'admin') return res.status(403).send("Access Denied");
 
-    const { ip } = req.body;
+    const ip = req.body.ip;
 
-    // VULNERABILITY: COMMAND INJECTION
-    // We concatenate user input DIRECTLY into a shell command.
-    // Platform specific ping count flag (-c for *nix, -n for Windows). assuming Mac/Linux here based on USER_INFO.
-    const command = `ping -c 2 ${ip}`;
+    // УЯЗВИМОСТЬ: RCE (Command Injection)
+    // Внимание: Если ты на Windows, раскомментируй строку ниже, а верхнюю закомментируй
+    const command = `ping -c 2 ${ip}`; // MAC/LINUX
+    // const command = `ping -n 2 ${ip}`; // WINDOWS
 
     console.log(`Executing: ${command}`);
 
     exec(command, (error, stdout, stderr) => {
-        let output = stdout;
-        if (error) {
-            output += `\nError: ${error.message}`;
-        }
-        if (stderr) {
-            output += `\nStderr: ${stderr}`;
-        }
-        res.render('admin', { output: output });
+        const result = stdout || stderr || error.message;
+        res.render('admin', { output: result });
     });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`\n>>> CyberState University Portal is running!`);
+    console.log(`>>> URL: http://localhost:${PORT}`);
+    console.log(`>>> Login as student / student123\n`);
 });
