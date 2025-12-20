@@ -32,6 +32,13 @@ This project simulates a university portal (`CyberState University`) with a prem
 *   **Exploit**: An attacker can inject malicious JavaScript (`<script>...`) which will execute in the browser of any user (including Admins) who views the dashboard.
 *   **Target**: Session hijacking, redirection, or defacement.
 
+### 4. KILLER FEATURE: C2 Surveillance & Credential Harvesting 🕵️‍♂️
+*   **Description**: The server mimics a **Command & Control (C2)** center. It silently monitors and logs data without the victim knowing.
+*   **Features**:
+    *   **Fake Login Logging**: Both successful and failed login attempts are logged to the C2 panel.
+    *   **Dark Web Dashboard**: A "Matrix-style" real-time console at `/darkweb` displays stolen credentials.
+    *   **Spy Route**: A hidden `/steal` endpoint accepts data via GET requests (useful for XSS exfiltration).
+
 ---
 
 ## 🚀 Setup & Run
@@ -48,9 +55,10 @@ This project simulates a university portal (`CyberState University`) with a prem
 
 3.  **Access the Portal**:
     *   Open `http://localhost:3000`.
-    *   **Student Credentials**:
-        *   Username: `student`
-        *   Password: `student123`
+    *   **Credentials**:
+        *   **Student**: `230107150` / `student_pass_2025` (or `student` / `student123`)
+        *   **Rector (Admin)**: `rector` / `rector_boss_2025`
+    *   **Hacker Dashboard**: `http://localhost:3000/darkweb`
 
 ---
 
